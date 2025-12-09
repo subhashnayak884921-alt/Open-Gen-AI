@@ -1,57 +1,330 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simple AI Chat</title>
-<style>
-  body { font-family: Arial; padding: 20px; }
-  #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
-  #userInput { width: 80%; padding: 5px; }
-  #sendBtn { padding: 5px 10px; }
-  .message { margin: 5px 0; }
-  .user { color: blue; }
-  .ai { color: green; }
-</style>
+    <base target="_self">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Nexus - All-in-One AI Platform</title>
+    <meta name="description" content="Complete AI platform with ChatGPT-like chat, search engine, and image generator">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#2563eb",
+                        secondary: "#7c3aed",
+                        accent: "#059669",
+                        dark: "#1f2937",
+                        light: "#f8fafc"
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-slow': 'bounce 2s infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .chat-bubble-user {
+            border-radius: 18px 18px 4px 18px;
+        }
+        .chat-bubble-ai {
+            border-radius: 18px 18px 18px 4px;
+        }
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+        }
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #9ca3af;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .search-result-card {
+            transition: all 0.3s ease;
+        }
+        .search-result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
-<body>
+<body class="min-h-screen bg-gray-50">
+    <!-- Header/Navigation -->
+    <header class="gradient-bg text-white shadow-lg">
+        <nav class="container mx-auto px-4 py-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-3 mb-4 md:mb-0">
+                    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+                        <i class="fas fa-robot text-primary text-xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold">AI Nexus</h1>
+                </div>
+                
+                <div class="flex flex-wrap gap-4 md:gap-6">
+                    <button id="nav-chat" class="nav-btn active flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                        <i class="fas fa-comments"></i>
+                        <span>AI Chat</span>
+                    </button>
+                    <button id="nav-search" class="nav-btn flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-white/10 transition">
+                        <i class="fas fa-search"></i>
+                        <span>Search</span>
+                    </button>
+                    <button id="nav-image" class="nav-btn flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-white/10 transition">
+                        <i class="fas fa-image"></i>
+                        <span>Image Gen</span>
+                    </button>
+                    <button id="nav-code" class="nav-btn flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-white/10 transition">
+                        <i class="fas fa-code"></i>
+                        <span>Code</span>
+                    </button>
+                </div>
+                
+                <div class="mt-4 md:mt-0">
+                    <button class="px-6 py-2 bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition">
+                        <i class="fas fa-user mr-2"></i>Sign In
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-<h1>AI Chat App</h1>
-<div id="chat"></div>
-<input type="text" id="userInput" placeholder="Type a message..."/>
-<button id="sendBtn">Send</button>
+    <!-- Main Content Area -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- AI Chat Section (Default Active) -->
+        <section id="chat-section" class="section active">
+            <div class="max-w-6xl mx-auto">
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="p-4 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">
+                            <i class="fas fa-robot text-primary mr-2"></i>AI Assistant
+                        </h2>
+                        <p class="text-gray-600 text-sm mt-1">Ask me anything - I can help with questions, writing, coding, and more!</p>
+                    </div>
+                    
+                    <div class="flex flex-col h-[500px]">
+                        <!-- Chat Messages Container -->
+                        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-6">
+                            <div class="flex justify-start">
+                                <div class="chat-bubble-ai bg-gray-100 p-4 max-w-[80%]">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                                            <i class="fas fa-robot text-white text-sm"></i>
+                                        </div>
+                                        <span class="font-semibold">AI Assistant</span>
+                                    </div>
+                                    <p class="text-gray-700">Hello! I'm your AI assistant. I can help you with:</p>
+                                    <ul class="mt-2 text-gray-700 list-disc pl-5 space-y-1">
+                                        <li>Answering questions and providing information</li>
+                                        <li>Writing and content creation</li>
+                                        <li>Coding and programming help</li>
+                                        <li>Searching the web for latest information</li>
+                                        <li>Generating images from text descriptions</li>
+                                    </ul>
+                                    <p class="mt-3 text-gray-700">What would you like to do today?</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end">
+                                <div class="chat-bubble-user bg-primary text-white p-4 max-w-[80%]">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="font-semibold">You</span>
+                                        <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                                            <i class="fas fa-user text-primary text-sm"></i>
+                                        </div>
+                                    </div>
+                                    <p>Can you help me create a website?</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-start">
+                                <div class="chat-bubble-ai bg-gray-100 p-4 max-w-[80%]">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                                            <i class="fas fa-robot text-white text-sm"></i>
+                                        </div>
+                                        <span class="font-semibold">AI Assistant</span>
+                                    </div>
+                                    <p class="text-gray-700">Absolutely! I can help you create a website. Here's what I can assist with:</p>
+                                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                            <i class="fas fa-code text-accent text-lg mb-2"></i>
+                                            <h4 class="font-semibold">HTML/CSS Code</h4>
+                                            <p class="text-sm text-gray-600">Generate complete HTML and CSS code</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                            <i class="fab fa-js text-yellow-500 text-lg mb-2"></i>
+                                            <h4 class="font-semibold">JavaScript</h4>
+                                            <p class="text-sm text-gray-600">Add interactivity and functionality</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                            <i class="fas fa-mobile-alt text-secondary text-lg mb-2"></i>
+                                            <h4 class="font-semibold">Responsive Design</h4>
+                                            <p class="text-sm text-gray-600">Make it work on all devices</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                                            <i class="fas fa-palette text-pink-500 text-lg mb-2"></i>
+                                            <h4 class="font-semibold">UI/UX Design</h4>
+                                            <p class="text-sm text-gray-600">Create beautiful user interfaces</p>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3 text-gray-700">What type of website would you like to build?</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chat Input -->
+                        <div class="border-t border-gray-200 p-4">
+                            <div class="flex space-x-3">
+                                <div class="flex-1">
+                                    <div class="relative">
+                                        <input 
+                                            type="text" 
+                                            id="chat-input" 
+                                            placeholder="Type your message here..." 
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                                        >
+                                        <div class="absolute right-3 top-3 flex space-x-2">
+                                            <button class="text-gray-400 hover:text-primary">
+                                                <i class="fas fa-microphone"></i>
+                                            </button>
+                                            <button class="text-gray-400 hover:text-primary">
+                                                <i class="fas fa-image"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button id="send-message" class="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center">
+                                    <i class="fas fa-paper-plane mr-2"></i>Send
+                                </button>
+                            </div>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button class="quick-prompt px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">
+                                    <i class="fas fa-lightbulb mr-1"></i>Write a blog post
+                                </button>
+                                <button class="quick-prompt px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">
+                                    <i class="fas fa-code mr-1"></i>Explain this code
+                                </button>
+                                <button class="quick-prompt px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">
+                                    <i class="fas fa-search mr-1"></i>Search latest news
+                                </button>
+                                <button class="quick-prompt px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">
+                                    <i class="fas fa-image mr-1"></i>Generate an image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<script>
-const chatDiv = document.getElementById("chat");
-const userInput = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
-
-sendBtn.addEventListener("click", async () => {
-    const message = userInput.value;
-    if (!message) return;
-
-    appendMessage("user", message);
-    userInput.value = "";
-
-    const response = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-    });
-
-    const data = await response.json();
-    appendMessage("ai", data.reply);
-});
-
-function appendMessage(sender, text) {
-    const div = document.createElement("div");
-    div.className = `message ${sender}`;
-    div.textContent = `${sender === "user" ? "You" : "AI"}: ${text}`;
-    chatDiv.appendChild(div);
-    chatDiv.scrollTop = chatDiv.scrollHeight;
-}
-</script>
-
-</body>
-</html>
+        <!-- Search Engine Section -->
+        <section id="search-section" class="section hidden">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-3">
+                        <i class="fas fa-search text-primary mr-3"></i>AI-Powered Search
+                    </h2>
+                    <p class="text-gray-600">Search the web with AI-enhanced results and intelligent filtering</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            placeholder="Search for anything..." 
+                            class="w-full pl-10 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-lg"
+                        >
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <button id="search-button" class="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-blue-700 transition">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex flex-wrap gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="filter-web" class="mr-2" checked>
+                            <label for="filter-web" class="text-gray-700">Web Results</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="filter-news" class="mr-2" checked>
+                            <label for="filter-news" class="text-gray-700">News</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="filter-images" class="mr-2">
+                            <label for="filter-images" class="text-gray-700">Images</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="filter-videos" class="mr-2">
+                            <label for="filter-videos" class="text-gray-700">Videos</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="filter-academic" class="mr-2">
+                            <label for="filter-academic" class="text-gray-700">Academic</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Results -->
+                <div id="search-results" class="space-y-6">
+                    <div class="search-result-card bg-white rounded-lg shadow-md p-6">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">Featured</span>
+                                    <span class="text-gray-500 text-sm">https://www.example.com</span>
+                                </div>
+                                <h3 class="text-xl font-semibold text-primary mb-2">What is Artificial Intelligence?</h3>
+                                <p class="text-gray-700 mb-3">Artificial Intelligence (AI) refers to the simulation of human intelligence in machines that are programmed to think like humans and mimic their actions. The term may also be applied to any machine that exhibits traits associated with a human mind such as learning and problem-solving.</p>
+                                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                    <span><i class="far fa-clock mr-1"></i>Updated 2 days ago</span>
+                                    <span><i class="far fa-eye mr-1"></i>1.2M views</span>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <img src="https://picsum.photos/150/100?random=3" alt="AI technology illustration" class="rounded-lg" loading="lazy">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="search-result-card bg-white rounded-lg shadow-md p-6">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="text-gray-500 text-sm">https://www.technews.com</span>
+                            </div>
+                            <h3 class="text-xl font-semibold text-primary mb-2">Latest AI Developments in 2024</h3>
+                            <p class="text-gray-700 mb-3">The year 2024 has seen remarkable advancements in AI technology, including more sophisticated language models, improved computer vision systems, and ethical AI frameworks. Major tech companies continue to invest heavily in AI research and development.</p>
+                            <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                <span><i class="far fa-clock mr-1"></i>5 hours ago</span>
+                                <span><i class="far fa-newspaper mr-1"></i>Tech News</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="search-result-card bg-white rounded-lg shadow-md p-6">
+                        <div 
