@@ -1,269 +1,57 @@
-<!doctype html>
-<html lang="hi">
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>AI Mehndi Studio - Builder & Image Generator</title>
-  <style>
-    :root{--bg:#f6f7fb;--card:#fff;--accent:#0f172a;--muted:#6b7280}
-    body{margin:0;font-family:Inter, system-ui, -apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--accent)}
-    .wrap{max-width:1100px;margin:28px auto;padding:18px}
-    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(12,15,30,.06);margin-bottom:18px}
-    h1{margin:0;font-size:22px}
-    label{display:block;margin:10px 0 6px;font-weight:600}
-    input[type="text"], textarea, select{width:100%;padding:10px;border:1px solid #e6e6e9;border-radius:8px;font-size:14px}
-    input[type="file"]{padding:8px 0}
-    .row{display:flex;gap:12px;align-items:center}
-    button{background:var(--accent);color:#fff;padding:10px 14px;border-radius:8px;border:0;cursor:pointer}
-    button[disabled]{opacity:.6;cursor:default}
-    .muted{color:var(--muted);font-size:13px}
-    .col{flex:1}
-    .preview-img{max-width:240px;border-radius:8px;margin-top:8px}
-    .result-img{max-width:100%;border-radius:10px;margin-top:8px}
-    .flex{display:flex;gap:18px}
-    .sidebar{width:380px}
-    pre{background:#f3f4f6;padding:10px;border-radius:8px;overflow:auto}
-    footer{font-size:13px;color:var(--muted);margin-top:6px}
-    .small{font-size:13px;color:var(--muted)}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple AI Chat</title>
+<style>
+  body { font-family: Arial; padding: 20px; }
+  #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
+  #userInput { width: 80%; padding: 5px; }
+  #sendBtn { padding: 5px 10px; }
+  .message { margin: 5px 0; }
+  .user { color: blue; }
+  .ai { color: green; }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>AI Mehndi Studio — Website Builder & Image Generator</h1>
-      <div class="muted" style="margin-top:6px">Simple UI: website generate karo, image generate karo — backend URL change karna mat bhoolna.</div>
-    </div>
 
-    <div class="flex">
-      <div class="card col">
-        <h3>Website Generator</h3>
-        <div class="small muted">Backend must support <code>/api/generate-website</code> which returns a ZIP file.</div>
+<h1>AI Chat App</h1>
+<div id="chat"></div>
+<input type="text" id="userInput" placeholder="Type a message..."/>
+<button id="sendBtn">Send</button>
 
-        <label>Site short name (zip filename)</label>
-        <input id="siteName" type="text" value="my-mehndi-site" />
+<script>
+const chatDiv = document.getElementById("chat");
+const userInput = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
 
-        <label>Describe website (prompt)</label>
-        <textarea id="sitePrompt" rows="6">Create a modern responsive mehndi studio landing page with hero, gallery, services, contact form, booking button. Use warm colors and show examples of bridal mehndi.</textarea>
+sendBtn.addEventListener("click", async () => {
+    const message = userInput.value;
+    if (!message) return;
 
-        <div style="margin-top:10px" class="row">
-          <button id="genSiteBtn">Generate & Download ZIP</button>
-          <div id="siteStatus" class="small muted">Ready</div>
-        </div>
-        <div style="margin-top:10px" id="siteNote" class="muted small">Tip: After download, extract and upload contents to Hostinger <code>public_html</code>.</div>
-      </div>
+    appendMessage("user", message);
+    userInput.value = "";
 
-      <div class="card sidebar">
-        <h3>Image Generator</h3>
-        <div class="small muted">Uses backend endpoints <code>/api/upload-photo</code> and <code>/api/generate-image</code></div>
-
-        <label>Image Prompt</label>
-        <input id="imgPrompt" type="text" value="high detail bridal mehndi design on hand, studio lighting, photorealistic" />
-
-        <label style="margin-top:8px">(Optional) Upload sample photo</label>
-        <input id="imgFile" type="file" accept="image/*" />
-
-        <div id="fileInfo" class="muted small">No photo selected</div>
-        <img id="filePreview" class="preview-img" style="display:none" />
-
-        <div style="margin-top:10px" class="row">
-          <button id="genImgBtn">Generate Image</button>
-          <div id="imgStatus" class="small muted">Ready</div>
-        </div>
-
-        <div id="imgResult" style="margin-top:12px"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Prompt Search (example)</h3>
-      <div class="small muted">Get best stored prompt using backend <code>/api/retrieve</code></div>
-      <label>Search query</label>
-      <input id="searchQuery" type="text" value="bridal mehndi back hand intricate" />
-      <div style="margin-top:8px" class="row">
-        <button id="searchBtn">Search Best Prompt</button>
-        <div id="searchStatus" class="small muted">Ready</div>
-      </div>
-      <div id="searchResult" style="margin-top:10px"></div>
-    </div>
-
-    <div class="card">
-      <h3>Config & Quick Notes</h3>
-      <pre id="configBox"></pre>
-      <div style="margin-top:8px" class="small muted">
-        <strong>Make sure:</strong>
-        <ul>
-          <li>Backend CORS allows this frontend origin (or "*").</li>
-          <li>Set <code>STABILITY_KEY</code> and <code>OPENAI_API_KEY</code> as env vars on your backend (if needed).</li>
-          <li>If deploying static frontend to Hostinger, build-time BACKEND URL must be embedded or use the <code>config.js</code> approach.</li>
-        </ul>
-      </div>
-      <footer>Need help deploying? Reply and I will give exact Hostinger steps for this file.</footer>
-    </div>
-  </div>
-
-  <script>
-    // === CONFIG: change this to your deployed FastAPI backend URL (no trailing slash) ===
-    const BACKEND_URL = 'http://localhost:3000'; // <-- change before uploading to Hostinger
-
-    // display config
-    document.getElementById('configBox').textContent = `BACKEND_URL = ${BACKEND_URL}\nEndpoints used:\n- ${BACKEND_URL}/api/generate-website (POST form)\n- ${BACKEND_URL}/api/upload-photo (POST form field 'file')\n- ${BACKEND_URL}/api/generate-image (POST form fields 'prompt' and optional 'init_image_filename')\n- ${BACKEND_URL}/api/retrieve (POST form field 'query')`;
-
-    // elements
-    const genSiteBtn = document.getElementById('genSiteBtn');
-    const siteStatus = document.getElementById('siteStatus');
-    const siteNameEl = document.getElementById('siteName');
-    const sitePromptEl = document.getElementById('sitePrompt');
-
-    const genImgBtn = document.getElementById('genImgBtn');
-    const imgStatus = document.getElementById('imgStatus');
-    const imgPromptEl = document.getElementById('imgPrompt');
-    const imgFileEl = document.getElementById('imgFile');
-    const fileInfo = document.getElementById('fileInfo');
-    const filePreview = document.getElementById('filePreview');
-    const imgResult = document.getElementById('imgResult');
-
-    const searchBtn = document.getElementById('searchBtn');
-    const searchQueryEl = document.getElementById('searchQuery');
-    const searchStatus = document.getElementById('searchStatus');
-    const searchResult = document.getElementById('searchResult');
-
-    let uploadedFilename = null;
-
-    imgFileEl.addEventListener('change', () => {
-      const f = imgFileEl.files[0];
-      if (!f) {
-        fileInfo.textContent = 'No photo selected';
-        filePreview.style.display = 'none';
-        uploadedFilename = null;
-        return;
-      }
-      fileInfo.textContent = `Selected: ${f.name} • ${Math.round(f.size/1024)} KB`;
-      filePreview.src = URL.createObjectURL(f);
-      filePreview.style.display = 'block';
-      uploadedFilename = null;
+    const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
     });
 
-    // helper: upload photo
-    async function uploadPhoto(file) {
-      if (!file) return null;
-      imgStatus.textContent = 'Uploading photo...';
-      const fd = new FormData();
-      fd.append('file', file, file.name); // backend expects field name 'file'
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/upload-photo`, { method: 'POST', body: fd });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || 'Upload failed');
-        }
-        const j = await res.json();
-        imgStatus.textContent = 'Photo uploaded';
-        return j.filename || j.file || null;
-      } catch (err) {
-        imgStatus.textContent = 'Upload error';
-        alert('Photo upload error: ' + err.message);
-        return null;
-      }
-    }
+    const data = await response.json();
+    appendMessage("ai", data.reply);
+});
 
-    // Generate Image
-    genImgBtn.addEventListener('click', async () => {
-      genImgBtn.disabled = true;
-      imgResult.innerHTML = '';
-      try {
-        const prompt = imgPromptEl.value.trim();
-        if (!prompt) { alert('Prompt likho'); genImgBtn.disabled = false; return; }
+function appendMessage(sender, text) {
+    const div = document.createElement("div");
+    div.className = `message ${sender}`;
+    div.textContent = `${sender === "user" ? "You" : "AI"}: ${text}`;
+    chatDiv.appendChild(div);
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+</script>
 
-        let init = null;
-        if (imgFileEl.files[0]) {
-          init = await uploadPhoto(imgFileEl.files[0]);
-        }
-
-        imgStatus.textContent = 'Generating image (this may take 10-60s)...';
-        const fd = new FormData();
-        fd.append('prompt', prompt);
-        if (init) fd.append('init_image_filename', init);
-
-        const res = await fetch(`${BACKEND_URL}/api/generate-image`, { method: 'POST', body: fd });
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(t || 'Generation failed');
-        }
-        const j = await res.json();
-        const filename = j.imagePath || j.image || j.file || null;
-        if (!filename) throw new Error('No image returned');
-
-        const src = filename.startsWith('http') ? filename : `${BACKEND_URL}/uploads/${filename}`;
-        imgResult.innerHTML = `<div class="small muted">Result</div><img src="${src}" class="result-img" alt="generated" />`;
-        imgStatus.textContent = 'Done';
-      } catch (err) {
-        imgStatus.textContent = 'Error';
-        alert('Generate error: ' + (err.message || err));
-      } finally {
-        genImgBtn.disabled = false;
-      }
-    });
-
-    // Generate Website (download zip)
-    genSiteBtn.addEventListener('click', async () => {
-      genSiteBtn.disabled = true;
-      siteStatus.textContent = 'Generating website...';
-      try {
-        const siteName = siteNameEl.value.trim() || 'my-site';
-        const prompt = sitePromptEl.value.trim();
-        if (!prompt) { alert('Prompt likho'); genSiteBtn.disabled = false; return; }
-
-        const fd = new FormData();
-        fd.append('site_name', siteName);
-        fd.append('prompt', prompt);
-
-        const res = await fetch(`${BACKEND_URL}/api/generate-website`, { method: 'POST', body: fd });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || 'Generate website failed');
-        }
-        const blob = await res.blob();
-        // download zip
-        const url = window.URL.createObjectURL(new Blob([blob]));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${siteName}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        siteStatus.textContent = 'ZIP downloaded';
-      } catch (err) {
-        siteStatus.textContent = 'Error';
-        alert('Website generate error: ' + (err.message || err));
-      } finally {
-        genSiteBtn.disabled = false;
-      }
-    });
-
-    // Search retrieve example
-    searchBtn.addEventListener('click', async () => {
-      searchBtn.disabled = true;
-      searchStatus.textContent = 'Searching...';
-      searchResult.textContent = '';
-      try {
-        const q = searchQueryEl.value.trim();
-        if (!q) { alert('Query likho'); searchBtn.disabled = false; return; }
-        const fd = new FormData();
-        fd.append('query', q);
-        const res = await fetch(`${BACKEND_URL}/api/retrieve`, { method: 'POST', body: fd });
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(t || 'Search failed');
-        }
-        const j = await res.json();
-        searchResult.innerHTML = `<div><strong>Best prompt:</strong></div><pre>${j.prompt}</pre><div class="muted small">score: ${j.score ?? 'n/a'}</div>`;
-        searchStatus.textContent = 'Done';
-      } catch (err) {
-        searchStatus.textContent = 'Error';
-        alert('Search error: ' + (err.message || err));
-      } finally {
-        searchBtn.disabled = false;
-      }
-    });
-  </script>
 </body>
-                                                                                                </html>
+</html>
